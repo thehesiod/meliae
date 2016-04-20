@@ -98,7 +98,7 @@ _var_object_size(PyVarObject *c_obj)
         PyErr_Clear();
     }
     return _basic_object_size((PyObject *)c_obj)
-            + num_entries * c_obj->ob_type->tp_itemsize;
+            + num_entries * Py_TYPE(c_obj)->tp_itemsize;
 }
 
 static Py_ssize_t
@@ -172,10 +172,17 @@ static Py_ssize_t
 _size_of_dict(PyDictObject *c_obj)
 {
     Py_ssize_t size;
+#if PY_MAJOR_VERSION >= 3
+    PyObject* long_size;
+
+    long_size = _PyDict_SizeOf(c_obj);
+    size = PyLong_AsSize_t(long_size);
+#else
     size = _basic_object_size((PyObject *)c_obj);
     if (c_obj->ma_table != c_obj->ma_smalltable) {
         size += sizeof(PyDictEntry) * (c_obj->ma_mask + 1);
     }
+#endif
     return size;
 }
 
@@ -185,7 +192,7 @@ _size_of_unicode(PyUnicodeObject *c_obj)
 {
     Py_ssize_t size;
     size = _basic_object_size((PyObject *)c_obj);
-    size += Py_UNICODE_SIZE * c_obj->length;
+    size += Py_UNICODE_SIZE * PyUnicode_GetSize(c_obj);
     return size;
 }
 
@@ -515,7 +522,11 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
     } else if (PyClass_Check(c_obj)) {
         /* Old style class */
         _write_static_to_info(info, ", \"name\": ");
+#if PY_MAJOR_VERSION >= 3
+        _dump_string(info, ((PyClassObject *)c_obj)->tp_name);
+#else
         _dump_string(info, ((PyClassObject *)c_obj)->cl_name);
+#endif
     }
     if (PyString_Check(c_obj)) {
         _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyString_GET_SIZE(c_obj));

@@ -25,7 +25,13 @@
 #include <Python.h>
 #include <code.h>
 #include <frameobject.h>
+#include <dictobject.h>
 #include <stdio.h>
+
+#if PY_MAJOR_VERSION >= 3
+#define PyClassObject PyTypeObject
+#define PyClass_Check(obj) PyObject_IsInstance(obj, (PyObject *)&PyType_Type)
+#endif
 
 /**
  * Compute the size of the data directly addressed by this object.
